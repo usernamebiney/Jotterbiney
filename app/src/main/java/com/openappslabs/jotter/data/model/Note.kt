@@ -43,5 +43,7 @@ data class Note(
     val isPinned: Boolean = false,
     val isLocked: Boolean = false,
     val isArchived: Boolean = false,
-    val isTrashed: Boolean = false
+    val isTrashed: Boolean = false,
+    val isEncrypted: Boolean = false,
+    val encryptedContent: String = ""
 )
