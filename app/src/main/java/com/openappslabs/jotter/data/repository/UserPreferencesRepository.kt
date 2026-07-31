@@ -48,7 +48,9 @@ data class UserPreferences(
     val is24HourFormat: Boolean = false,
     val dateFormat: String = "dd MMM",
     val sortType: String = SortType.ALPHABETICAL.name,
-    val sortDirection: String = SortDirection.ASCENDING.name
+    val sortDirection: String = SortDirection.ASCENDING.name,
+    val isVaultEncryptionEnabled: Boolean = false,
+    val vaultPasswordHash: String = ""
 )
 
 class UserPreferencesRepository @Inject constructor(
@@ -71,6 +73,8 @@ class UserPreferencesRepository @Inject constructor(
         val DATE_FORMAT = stringPreferencesKey("date_format")
         val SORT_TYPE = stringPreferencesKey("sort_type")
         val SORT_DIRECTION = stringPreferencesKey("sort_direction")
+        val IS_VAULT_ENCRYPTION = booleanPreferencesKey("is_vault_encryption")
+        val VAULT_PASSWORD_HASH = stringPreferencesKey("vault_password_hash")
     }
     val userPreferencesFlow: Flow<UserPreferences> = dataStore.data
         .catch { exception ->
@@ -98,7 +102,9 @@ class UserPreferencesRepository @Inject constructor(
                 is24HourFormat = preferences[Keys.IS_24_HOUR_FORMAT] ?: false,
                 dateFormat = preferences[Keys.DATE_FORMAT] ?: "dd MMM",
                 sortType = preferences[Keys.SORT_TYPE] ?: SortType.ALPHABETICAL.name,
-                sortDirection = preferences[Keys.SORT_DIRECTION] ?: SortDirection.ASCENDING.name
+                sortDirection = preferences[Keys.SORT_DIRECTION] ?: SortDirection.ASCENDING.name,
+                isVaultEncryptionEnabled = preferences[Keys.IS_VAULT_ENCRYPTION] ?: false,
+                vaultPasswordHash = preferences[Keys.VAULT_PASSWORD_HASH] ?: ""
             )
         }
         .distinctUntilChanged()
@@ -137,6 +143,14 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setSecureMode(enabled: Boolean) {
         dataStore.edit { it[Keys.IS_SECURE_MODE] = enabled }
+    }
+
+    suspend fun setVaultEncryption(enabled: Boolean) {
+        dataStore.edit { it[Keys.IS_VAULT_ENCRYPTION] = enabled }
+    }
+
+    suspend fun setVaultPasswordHash(hash: String) {
+        dataStore.edit { it[Keys.VAULT_PASSWORD_HASH] = hash }
     }
 
     suspend fun clearAllData() {
