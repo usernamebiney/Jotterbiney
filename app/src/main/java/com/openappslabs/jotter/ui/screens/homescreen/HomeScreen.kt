@@ -19,6 +19,7 @@ package com.openappslabs.jotter.ui.screens.homescreen
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,10 +38,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.openappslabs.jotter.ui.components.SortSheet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -51,8 +54,11 @@ import com.openappslabs.jotter.ui.components.CategoryItems
 import com.openappslabs.jotter.ui.components.FAB
 import com.openappslabs.jotter.ui.components.NoteCard
 import com.openappslabs.jotter.ui.components.SearchBar
+import com.openappslabs.jotter.ui.components.VaultPasswordDialog
 import com.openappslabs.jotter.ui.theme.rememberJotterHaptics
 import com.openappslabs.jotter.utils.BiometricAuthUtil
+import com.openappslabs.jotter.utils.PasswordAuthUtil
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -71,8 +77,10 @@ fun HomeScreen(
     val listState = rememberLazyStaggeredGridState()
     val context = LocalContext.current
     val locale = Locale.getDefault()
+    val coroutineScope = rememberCoroutineScope()
 
     var showSortSheet by remember { mutableStateOf(false) }
+    var showVaultDialog by remember { mutableStateOf(false) }
     val sortSheetState = rememberModalBottomSheetState()
     val dateFormatter = remember(uiState.dateFormat, uiState.isGridView, locale) {
         val format = if (!uiState.isGridView) {
@@ -106,6 +114,13 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures { _, dragAmount ->
+                        if (dragAmount > 100 && uiState.isVaultEncryptionEnabled) {
+                            showVaultDialog = true
+                        }
+                    }
+                }
         ) {
             SearchBar(
                 query = uiState.searchQuery,
@@ -161,7 +176,9 @@ fun HomeScreen(
                         onClick   = { 
                             haptics.tick()
                             viewModel.onNoteClicked(note.id)
-                            if (note.isLocked && uiState.isBiometricEnabled) {
+                            if (note.isEncrypted && uiState.isVaultEncryptionEnabled) {
+                                showVaultDialog = true
+                            } else if (note.isLocked && uiState.isBiometricEnabled) {
                                 val activity = context as? FragmentActivity
                                 if (activity != null) {
                                     BiometricAuthUtil.authenticate(
@@ -201,6 +218,24 @@ fun HomeScreen(
                 viewModel.setSortDirection(it)
             },
             onDismissRequest = { showSortSheet = false }
+        )
+    }
+
+    if (showVaultDialog) {
+        VaultPasswordDialog(
+            onAuthenticate = { password ->
+                val isValid = PasswordAuthUtil.verifyPassword(
+                    password,
+                    uiState.vaultPasswordHash
+                )
+                if (isValid) {
+                    showVaultDialog = false
+                    Toast.makeText(context, "Vault unlocked!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Invalid password", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { showVaultDialog = false }
         )
     }
 }
