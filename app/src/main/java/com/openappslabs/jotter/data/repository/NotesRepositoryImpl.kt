@@ -22,6 +22,7 @@ import com.openappslabs.jotter.data.model.Note
 import com.openappslabs.jotter.data.source.CategoryDao
 import com.openappslabs.jotter.data.source.JotterDatabase
 import com.openappslabs.jotter.data.source.NoteDao
+import com.openappslabs.jotter.utils.EncryptionUtil
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -37,11 +38,43 @@ class NotesRepositoryImpl @Inject constructor(
     override suspend fun getNoteById(noteId: Int): Note? = noteDao.getNoteById(noteId)
 
     override suspend fun addNote(note: Note): Long {
-        return noteDao.insert(note.copy(updatedTime = System.currentTimeMillis()))
+        val updatedNote = if (note.isEncrypted && note.content.isNotEmpty()) {
+            note.copy(
+                encryptedContent = EncryptionUtil.encryptData(note.content),
+                content = "",
+                updatedTime = System.currentTimeMillis()
+            )
+        } else {
+            note.copy(updatedTime = System.currentTimeMillis())
+        }
+        return noteDao.insert(updatedNote)
     }
 
     override suspend fun updateNote(note: Note) {
-        noteDao.update(note.copy(updatedTime = System.currentTimeMillis()))
+        val updatedNote = if (note.isEncrypted && note.content.isNotEmpty()) {
+            note.copy(
+                encryptedContent = EncryptionUtil.encryptData(note.content),
+                content = "",
+                updatedTime = System.currentTimeMillis()
+            )
+        } else {
+            note.copy(updatedTime = System.currentTimeMillis())
+        }
+        noteDao.update(updatedNote)
+    }
+
+    suspend fun decryptNote(note: Note): Note {
+        return if (note.isEncrypted && note.encryptedContent.isNotEmpty()) {
+            try {
+                val decryptedContent = EncryptionUtil.decryptData(note.encryptedContent)
+                note.copy(content = decryptedContent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                note
+            }
+        } else {
+            note
+        }
     }
 
     override suspend fun archiveNote(note: Note) {
