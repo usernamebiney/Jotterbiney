@@ -121,7 +121,9 @@ class HomeScreenViewModel @Inject constructor(
             isBiometricEnabled = prefs.isBiometricEnabled,
             dateFormat = prefs.dateFormat,
             sortType = sortType,
-            sortDirection = sortDirection
+            sortDirection = sortDirection,
+            isVaultEncryptionEnabled = prefs.isVaultEncryptionEnabled,
+            vaultPasswordHash = prefs.vaultPasswordHash
         )
     }
     .distinctUntilChanged()
@@ -143,7 +145,9 @@ class HomeScreenViewModel @Inject constructor(
         val isBiometricEnabled: Boolean = false,
         val dateFormat: String = "dd MMM",
         val sortType: SortType = SortType.ALPHABETICAL,
-        val sortDirection: SortDirection = SortDirection.ASCENDING
+        val sortDirection: SortDirection = SortDirection.ASCENDING,
+        val isVaultEncryptionEnabled: Boolean = false,
+        val vaultPasswordHash: String = ""
     )
 
     fun toggleGridView() {
